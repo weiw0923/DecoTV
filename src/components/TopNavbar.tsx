@@ -2,7 +2,7 @@
 
 'use client';
 
-import { Cat, Clover, Film, Home, Radio, Search, Tv } from 'lucide-react';
+import { Cat, Clover, Film, Radio, Tv } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import React from 'react';
@@ -42,28 +42,8 @@ export default function TopNavbar() {
               </Link>
             </div>
 
-            {/* Center: Controls */}
+            {/* Center: Only categories — 首页和搜索已移除 */}
             <div className='flex items-center justify-center gap-2 flex-wrap'>
-              <Link
-                href='/'
-                className={`inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm hover:opacity-90 transition-all glass-chip chip-glow chip-theme chip-home ${
-                  isActive('/') ? 'ring-2 ring-purple-400/60' : ''
-                }`}
-              >
-                <Home className='h-4 w-4' />
-                <span>首页</span>
-              </Link>
-              <Link
-                href='/search'
-                className={`inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm hover:opacity-90 transition-all glass-chip chip-glow chip-theme chip-search ${
-                  isActive('/search') ? 'ring-2 ring-purple-400/60' : ''
-                }`}
-              >
-                <Search className='h-4 w-4' />
-                <span>搜索</span>
-              </Link>
-
-              {/* Categories */}
               <Link
                 href='/douban?type=movie'
                 className={`inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm hover:opacity-90 transition-all glass-chip chip-glow chip-theme chip-movie ${
