@@ -10,7 +10,6 @@ import {
   BangumiCalendarData,
   GetBangumiCalendarData,
 } from '@/lib/bangumi.client';
-// 客户端收藏 API
 import {
   clearAllFavorites,
   getAllFavorites,
@@ -29,7 +28,7 @@ import { useSite } from '@/components/SiteProvider';
 import VideoCard from '@/components/VideoCard';
 
 function HomeClient() {
-  const [activeTab, setActiveTab] = useState<'home' | 'favorites'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'favorites' | 'search'>('home');
   const [hotMovies, setHotMovies] = useState<DoubanItem[]>([]);
   const [hotTvShows, setHotTvShows] = useState<DoubanItem[]>([]);
   const [hotVarietyShows, setHotVarietyShows] = useState<DoubanItem[]>([]);
@@ -41,7 +40,7 @@ function HomeClient() {
 
   const [showAnnouncement, setShowAnnouncement] = useState(false);
 
-  // 检查公告弹窗状态
+  // 公告弹窗逻辑
   useEffect(() => {
     if (typeof window !== 'undefined' && announcement) {
       const hasSeenAnnouncement = localStorage.getItem('hasSeenAnnouncement');
@@ -53,7 +52,7 @@ function HomeClient() {
     }
   }, [announcement]);
 
-  // 收藏夹数据
+  // 收藏夹数据类型
   type FavoriteItem = {
     id: string;
     source: string;
@@ -68,12 +67,11 @@ function HomeClient() {
 
   const [favoriteItems, setFavoriteItems] = useState<FavoriteItem[]>([]);
 
+  // 加载推荐数据
   useEffect(() => {
     const fetchRecommendData = async () => {
       try {
         setLoading(true);
-
-        // 并行获取热门电影、热门剧集和热门综艺
         const [moviesData, tvShowsData, varietyShowsData, bangumiCalendarData] =
           await Promise.all([
             getDoubanCategories({
@@ -89,15 +87,12 @@ function HomeClient() {
         if (moviesData.code === 200) {
           setHotMovies(moviesData.list);
         }
-
         if (tvShowsData.code === 200) {
           setHotTvShows(tvShowsData.list);
         }
-
         if (varietyShowsData.code === 200) {
           setHotVarietyShows(varietyShowsData.list);
         }
-
         setBangumiCalendarData(bangumiCalendarData);
       } catch (error) {
         console.error('获取推荐数据失败:', error);
@@ -109,19 +104,15 @@ function HomeClient() {
     fetchRecommendData();
   }, []);
 
-  // 处理收藏数据更新的函数
+  // 更新收藏数据
   const updateFavoriteItems = async (allFavorites: Record<string, any>) => {
     const allPlayRecords = await getAllPlayRecords();
-
-    // 根据保存时间排序（从近到远）
     const sorted = Object.entries(allFavorites)
       .sort(([, a], [, b]) => b.save_time - a.save_time)
       .map(([key, fav]) => {
         const plusIndex = key.indexOf('+');
         const source = key.slice(0, plusIndex);
         const id = key.slice(plusIndex + 1);
-
-        // 查找对应的播放记录，获取当前集数
         const playRecord = allPlayRecords[key];
         const currentEpisode = playRecord?.index;
 
@@ -141,7 +132,7 @@ function HomeClient() {
     setFavoriteItems(sorted);
   };
 
-  // 当切换到收藏夹时加载收藏数据
+  // 加载收藏夹数据
   useEffect(() => {
     if (activeTab !== 'favorites') return;
 
@@ -152,7 +143,6 @@ function HomeClient() {
 
     loadFavorites();
 
-    // 监听收藏更新事件
     const unsubscribe = subscribeToDataUpdates(
       'favoritesUpdated',
       (newFavorites: Record<string, any>) => {
@@ -163,40 +153,26 @@ function HomeClient() {
     return unsubscribe;
   }, [activeTab]);
 
-  const handleCloseAnnouncement = (announcement: string) => {
+  const handleCloseAnnouncement = () => {
     setShowAnnouncement(false);
-    localStorage.setItem('hasSeenAnnouncement', announcement); // 记录已查看弹窗
+    localStorage.setItem('hasSeenAnnouncement', announcement);
   };
 
   return (
     <PageLayout>
-      {/* Hero Neon Logo */}
-      <div className='relative pt-16 sm:pt-20'>
-        <div className='flex items-center justify-center'>
-          <div className='text-center'>
-            <div className='mx-auto w-full px-4'>
-              <div className='inline-block rounded-3xl px-6 py-4 glass-card'>
-                <div className='text-4xl sm:text-6xl font-extrabold tracking-tight neon-text'>
-                  DecoTV
-                </div>
-                <div className='mt-2 text-sm sm:text-base text-gray-600 dark:text-gray-300'>
-                  发现、收藏、继续观看
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* Hero Logo 已移除 */}
+
       <div className='px-2 sm:px-10 py-4 sm:py-8 overflow-visible'>
-        {/* 顶部 Tab 切换 */}
+        {/* Tab 切换：新增“搜索” */}
         <div className='mb-8 flex justify-center'>
           <CapsuleSwitch
             options={[
               { label: '首页', value: 'home' },
               { label: '收藏夹', value: 'favorites' },
+              { label: '搜索', value: 'search' },
             ]}
             active={activeTab}
-            onChange={(value) => setActiveTab(value as 'home' | 'favorites')}
+            onChange={(value) => setActiveTab(value as any)}
           />
         </div>
 
@@ -238,8 +214,18 @@ function HomeClient() {
                 )}
               </div>
             </section>
+          ) : activeTab === 'search' ? (
+            // 搜索引导页
+            <section className='mb-8 text-center py-12'>
+              <Link
+                href='/search'
+                className='inline-block px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold rounded-full shadow-lg hover:opacity-90 transition transform hover:scale-105'
+              >
+                🔍 进入搜索页
+              </Link>
+            </section>
           ) : (
-            // 首页视图
+            // 首页内容（原逻辑完整保留）
             <>
               {/* 继续观看 */}
               <ContinueWatching />
@@ -260,8 +246,7 @@ function HomeClient() {
                 </div>
                 <ScrollableRow>
                   {loading
-                    ? // 加载状态显示灰色占位数据
-                      Array.from({ length: 8 }).map((_, index) => (
+                    ? Array.from({ length: 8 }).map((_, index) => (
                         <div
                           key={index}
                           className='min-w-[96px] w-24 sm:min-w-[180px] sm:w-44'
@@ -272,8 +257,7 @@ function HomeClient() {
                           <div className='mt-2 h-4 bg-gray-200 rounded animate-pulse dark:bg-gray-800'></div>
                         </div>
                       ))
-                    : // 显示真实数据
-                      hotMovies.map((movie, index) => (
+                    : hotMovies.map((movie, index) => (
                         <div
                           key={index}
                           className='min-w-[96px] w-24 sm:min-w-[180px] sm:w-44'
@@ -308,8 +292,7 @@ function HomeClient() {
                 </div>
                 <ScrollableRow>
                   {loading
-                    ? // 加载状态显示灰色占位数据
-                      Array.from({ length: 8 }).map((_, index) => (
+                    ? Array.from({ length: 8 }).map((_, index) => (
                         <div
                           key={index}
                           className='min-w-[96px] w-24 sm:min-w-[180px] sm:w-44'
@@ -320,8 +303,7 @@ function HomeClient() {
                           <div className='mt-2 h-4 bg-gray-200 rounded animate-pulse dark:bg-gray-800'></div>
                         </div>
                       ))
-                    : // 显示真实数据
-                      hotTvShows.map((show, index) => (
+                    : hotTvShows.map((show, index) => (
                         <div
                           key={index}
                           className='min-w-[96px] w-24 sm:min-w-[180px] sm:w-44'
@@ -355,8 +337,7 @@ function HomeClient() {
                 </div>
                 <ScrollableRow>
                   {loading
-                    ? // 加载状态显示灰色占位数据
-                      Array.from({ length: 8 }).map((_, index) => (
+                    ? Array.from({ length: 8 }).map((_, index) => (
                         <div
                           key={index}
                           className='min-w-[96px] w-24 sm:min-w-[180px] sm:w-44'
@@ -367,32 +348,15 @@ function HomeClient() {
                           <div className='mt-2 h-4 bg-gray-200 rounded animate-pulse dark:bg-gray-800'></div>
                         </div>
                       ))
-                    : // 展示当前日期的番剧
-                      (() => {
-                        // 获取当前日期对应的星期
+                    : (() => {
                         const today = new Date();
-                        const weekdays = [
-                          'Sun',
-                          'Mon',
-                          'Tue',
-                          'Wed',
-                          'Thu',
-                          'Fri',
-                          'Sat',
-                        ];
+                        const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
                         const currentWeekday = weekdays[today.getDay()];
-
-                        // 找到当前星期对应的番剧数据
                         const todayAnimes =
                           bangumiCalendarData.find(
                             (item) => item.weekday.en === currentWeekday
                           )?.items || [];
-
-                        // 过滤掉无效数据
-                        const validAnimes = todayAnimes.filter(
-                          (anime) => anime && anime.id
-                        );
-
+                        const validAnimes = todayAnimes.filter((anime) => anime && anime.id);
                         return validAnimes.map((anime, index) => (
                           <div
                             key={`${anime.id}-${index}`}
@@ -436,8 +400,7 @@ function HomeClient() {
                 </div>
                 <ScrollableRow>
                   {loading
-                    ? // 加载状态显示灰色占位数据
-                      Array.from({ length: 8 }).map((_, index) => (
+                    ? Array.from({ length: 8 }).map((_, index) => (
                         <div
                           key={index}
                           className='min-w-[96px] w-24 sm:min-w-[180px] sm:w-44'
@@ -448,8 +411,7 @@ function HomeClient() {
                           <div className='mt-2 h-4 bg-gray-200 rounded animate-pulse dark:bg-gray-800'></div>
                         </div>
                       ))
-                    : // 显示真实数据
-                      hotVarietyShows.map((show, index) => (
+                    : hotVarietyShows.map((show, index) => (
                         <div
                           key={index}
                           className='min-w-[96px] w-24 sm:min-w-[180px] sm:w-44'
@@ -469,69 +431,46 @@ function HomeClient() {
             </>
           )}
 
-          {/* DecoTV 底部炫酷卡片 */}
           <DecoTVFooterCard />
         </div>
       </div>
+
+      {/* 公告弹窗（保留原逻辑） */}
       {announcement && showAnnouncement && (
         <div
           className={`fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm dark:bg-black/70 p-4 transition-opacity duration-300 ${
             showAnnouncement ? '' : 'opacity-0 pointer-events-none'
           }`}
           onTouchStart={(e) => {
-            // 如果点击的是背景区域，阻止触摸事件冒泡，防止背景滚动
-            if (e.target === e.currentTarget) {
-              e.preventDefault();
-            }
+            if (e.target === e.currentTarget) e.preventDefault();
           }}
           onTouchMove={(e) => {
-            // 如果触摸的是背景区域，阻止触摸移动，防止背景滚动
             if (e.target === e.currentTarget) {
               e.preventDefault();
               e.stopPropagation();
             }
           }}
           onTouchEnd={(e) => {
-            // 如果触摸的是背景区域，阻止触摸结束事件，防止背景滚动
-            if (e.target === e.currentTarget) {
-              e.preventDefault();
-            }
+            if (e.target === e.currentTarget) e.preventDefault();
           }}
-          style={{
-            touchAction: 'none', // 禁用所有触摸操作
-          }}
+          style={{ touchAction: 'none' }}
         >
           <div
             className='w-full max-w-md rounded-xl bg-white p-6 shadow-xl dark:bg-gray-900 transform transition-all duration-300 hover:shadow-2xl'
-            onTouchMove={(e) => {
-              // 允许公告内容区域正常滚动，阻止事件冒泡到外层
-              e.stopPropagation();
-            }}
-            style={{
-              touchAction: 'auto', // 允许内容区域的正常触摸操作
-            }}
+            onTouchMove={(e) => e.stopPropagation()}
+            style={{ touchAction: 'auto' }}
           >
             <div className='flex justify-between items-start mb-4'>
               <h3 className='text-2xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-purple-500 via-pink-400 to-indigo-500 border-b-2 border-purple-400 pb-1 drop-shadow-lg'>
                 公告
               </h3>
               <button
-                onClick={() => handleCloseAnnouncement(announcement)}
+                onClick={() => handleCloseAnnouncement()}
                 className='text-purple-400 hover:text-purple-600 dark:text-purple-300 dark:hover:text-white transition-colors'
                 aria-label='关闭'
               >
-                <svg
-                  className='w-6 h-6'
-                  fill='none'
-                  stroke='currentColor'
-                  viewBox='0 0 24 24'
-                >
-                  <path
-                    strokeLinecap='round'
-                    strokeLinejoin='round'
-                    strokeWidth={2}
-                    d='M6 18L18 6M6 6l12 12'
-                  />
+                <svg className='w-6 h-6' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                  <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M6 18L18 6M6 6l12 12' />
                 </svg>
               </button>
             </div>
@@ -545,7 +484,7 @@ function HomeClient() {
               </div>
             </div>
             <button
-              onClick={() => handleCloseAnnouncement(announcement)}
+              onClick={() => handleCloseAnnouncement()}
               className='w-full rounded-lg bg-gradient-to-r from-purple-600 via-pink-500 to-indigo-600 px-4 py-3 text-white font-medium shadow-md hover:shadow-lg hover:from-purple-700 hover:via-pink-600 hover:to-indigo-700 dark:from-purple-600 dark:via-pink-500 dark:to-indigo-600 dark:hover:from-purple-700 dark:hover:via-pink-600 dark:hover:to-indigo-700 transition-all duration-300 transform hover:-translate-y-0.5'
             >
               我知道了
